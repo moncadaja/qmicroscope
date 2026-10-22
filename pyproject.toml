@@ -9,37 +9,42 @@ readme = "README.md"
 authors = [
     { name = "Venkateswaran (Shekar) Shekar", email = "vshekar1@bnl.gov" },
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
-dependencies = ["qtpy", "opencv-python-headless", "pillow"]
+# qtpy needs a Qt binding at runtime (PyQt6, PyQt5, PySide6 or PySide2);
+# install one with the `pyqt6` extra or through conda/pixi.
+dependencies = ["qtpy>=2.4", "opencv-python-headless", "pillow", "numpy", "requests", "pyepics"]
 
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+pyqt6 = ["PyQt6>=6.7"]
+test = ["pytest>=8", "pytest-qt", "pytest-mock"]
 
 [tool.hatch]
 version.source = "vcs"
 build.hooks.vcs.version-file = "qmicroscope/_version.py"
 
+[tool.hatch.version.raw-options]
+local_scheme = "node-and-date"
+fallback_version = "0.0.0"
+
 [tool.hatch.build.targets.wheel]
 packages = ["qmicroscope"]
 
-[tool.setuptools_scm]
-root = "."
-fallback_version = "0.0.0"
-version_scheme = "semantic"
-local_scheme = "node-and-date"
-write_to = "qmicroscope/_version.py"
-
-
+# --- pixi workspace ----------------------------------------------------------
+# pixi run main      -> grid of camera feeds           (main.py)
+# pixi run monitor   -> master-control style monitor   (monitor.py)
+# pixi run test      -> pytest (offscreen Qt)
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64"]
@@ -47,9 +52,26 @@ platforms = ["linux-64"]
 [tool.pixi.pypi-dependencies]
 qmicroscope = { path = ".", editable = true }
 
-[tool.pixi.tasks]
-
 [tool.pixi.dependencies]
-pyside6 = ">=6.11.1,<7"
-requests = ">=2.34.2,<3"
+python = ">=3.12,<3.14"
+pyqt6 = ">=6.7,<7"
+qtpy = ">=2.4"
+numpy = ">=2"
+opencv = ">=4.10"
+pillow = "*"
+requests = ">=2.32,<3"
 pyepics = ">=3.5.9,<4"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=8"
+pytest-qt = "*"
+pytest-mock = "*"
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+
+[tool.pixi.tasks]
+main = "python main.py"
+monitor = "python monitor.py"
+test = { cmd = "pytest -q tests", env = { QT_QPA_PLATFORM = "offscreen", QT_API = "pyqt6" } }
